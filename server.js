@@ -1,11 +1,14 @@
 const express = require('express')
 const socketio = require('socket.io')
 const mongoose = require('mongoose')
+const path = require('path')
+const userRoutes = require('./routes/userRoutes');
 
 const app = express()
 const SERVER_PORT = 3001
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'view')))
 
 // mongodb connection
 const DB_NAME = 'comp3133'
@@ -16,6 +19,8 @@ const DB_CONNECTION = `mongodb+srv://${DB_USER_NAME}:${DB_PASSWORD}@cluster0.vb9
 mongoose.connect(DB_CONNECTION)
 .then(() => console.log('Successfully connected to MongoDB'))
 .catch(err => console.error('Error connecting to MongoDB:', err));
+
+app.use('/user', userRoutes);
 
 // server connection
 const server = app.listen(SERVER_PORT, () => {
