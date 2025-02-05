@@ -45,26 +45,45 @@
             outline: none;
         }
 
-        button {
+        .buttons {
             margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
             width: 100%;
             padding: 10px;
-            background-color: #ff66b2;
-            color: black;
-            font-weight: bold;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            font-weight: bold;
         }
 
-        button:hover {
+        .create-btn {
+            background-color: #ff66b2;
+            color: black;
+        }
+
+        .create-btn:hover {
             background-color: pink;
+        }
+
+        .signin-btn {
+            background-color: gray;
+            color: white;
+        }
+
+        .signin-btn:hover {
+            background-color: darkgray;
         }
     </style>
 </head>
 <body>
     <form id="signupForm">
         <h2>Create an Account</h2>
+
         <label>First Name:</label>
         <input type="text" id="firstname" required>
 
@@ -77,35 +96,40 @@
         <label>Password:</label>
         <input type="password" id="password" required>
 
-        <button type="submit">Create Account</button>
+        <div class="buttons">
+            <button type="submit" class="create-btn">Create</button>
+            <button type="button" class="signin-btn" onclick="window.location.href='login.html'">Back to Sign In</button>
+        </div>
     </form>
-</body>
-<script>
-    document.getElementById('signupForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
 
-        const firstname = document.getElementById('firstname').value;
-        const lastname = document.getElementById('lastname').value;
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
 
-        try {
-            const response = await fetch('/user/signup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ firstname, lastname, username, password })
-            });
+            const firstname = document.getElementById('firstname').value;
+            const lastname = document.getElementById('lastname').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-            const data = await response.json();
+            try {
+                const response = await fetch('/user/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ firstname, lastname, username, password })
+                });
 
-            if (response.status === 201) {
-                alert(data.message);
-            } else {
-                alert(data.message || 'Signup failed');
+                const data = await response.json();
+
+                if (response.status === 201) {
+                    localStorage.setItem('loggedInUser', JSON.stringify({ username }));
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert(data.message || 'Signup failed');
+                }
+            } catch (error) {
+                alert('Error connecting to the server');
             }
-        } catch (error) {
-            alert('Error connecting to the server');
-        }
-    });
-</script>
+        });
+    </script>
+</body>
 </html>

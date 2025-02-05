@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Chat Room</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: black;
+            color: white;
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #222;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar h2 {
+            color: #ff66b2;
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .sidebar p {
+            margin: 10px 0;
+            color: white;
+        }
+
+        .sidebar .members {
+            margin-top: 20px;
+            color: white;
+        }
+
+        .sidebar .members ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar .members ul li {
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .leave-button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #ff66b2;
+            color: black;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .leave-button:hover {
+            background-color: pink;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background-color: #333;
+            padding: 20px;
+        }
+
+        .chat-area .messages {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #222;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .chat-area .messages p {
+            margin: 5px 0;
+            padding: 10px;
+            background-color: #444;
+            border-radius: 8px;
+        }
+
+        .chat-area .messages p.system {
+            background-color: #555;
+            text-align: center;
+            font-size: 14px;
+            color: lightgray;
+        }
+
+        .chat-area .input-area {
+            display: flex;
+        }
+
+        .chat-area .input-area input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #444;
+            color: white;
+            margin-right: 10px;
+        }
+
+        .chat-area .input-area input:focus {
+            outline: none;
+            border: 1px solid #ff66b2;
+        }
+
+        .chat-area .input-area button {
+            padding: 10px 20px;
+            background-color: #ff66b2;
+            color: black;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .chat-area .input-area button:hover {
+            background-color: #ff66b2;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Group Chat Room</h2>
+        <p id="room-name"></p>
+        <div class="members">
+            <h3>Members</h3>
+            <ul id="members-list">
+            </ul>
+        </div>
+        <button class="leave-button" onclick="leaveRoom()">Leave Chat Room</button>
+    </div>
+    <div class="chat-area">
+        <div class="messages" id="messages">
+        </div>
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Start chatting here...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomName = urlParams.get('room');
+        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+
+        if (!loggedInUser || !roomName) {
+            window.location.href = 'dashboard.html';
+        }
+
+        document.getElementById('room-name').textContent = `${roomName} Chat Room`;
+
+        socket.emit('joinRoom', { username: loggedInUser.username, room: roomName });
+
+        socket.on('roomUsers', ({ room, users }) => {
+            const membersList = document.getElementById('members-list');
+            membersList.innerHTML = '';
+            users.forEach(user => {
+                const li = document.createElement('li');
+                li.textContent = user.username;
+                membersList.appendChild(li);
+            });
+        });
+
+        socket.on('message', (message) => {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('p');
+            messageElement.textContent = `${message.username}: ${message.text}`;
+            messagesDiv.appendChild(messageElement);
+
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+
+            if (message) {
+                socket.emit('chatMessage', message);
+                messageInput.value = '';
+            }
+        }
+
+        function leaveRoom() {
+            socket.emit('leaveRoom');
+            localStorage.removeItem('joinedRoom');
+            window.location.href = 'dashboard.html';
+        }
+    </script>
+</body>
+</html>

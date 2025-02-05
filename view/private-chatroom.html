@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Chat Room</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: black;
+            color: white;
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #222;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar h2 {
+            color: #ff66b2;
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .sidebar p {
+            margin: 10px 0;
+            color: white;
+        }
+
+        .leave-button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #ff66b2;
+            color: black;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .leave-button:hover {
+            background-color: pink;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background-color: #333;
+            padding: 20px;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #222;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .messages p {
+            margin: 5px 0;
+            padding: 10px;
+            background-color: #444;
+            border-radius: 8px;
+        }
+
+        .messages p.sent {
+            background-color: #ff66b2;
+            text-align: right;
+            color: black;
+        }
+
+        .messages p.received {
+            background-color: #444;
+            text-align: left;
+            color: white;
+        }
+
+        #typingIndicator {
+            font-size: 14px;
+            color: pink;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        .input-area {
+            display: flex;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #444;
+            color: white;
+            margin-right: 10px;
+        }
+
+        .input-area input:focus {
+            outline: none;
+            border: 1px solid #ff66b2;
+        }
+
+        .input-area button {
+            padding: 10px 20px;
+            background-color: #ff66b2;
+            color: black;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .input-area button:hover {
+            background-color: pink;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Private Chat</h2>
+        <p>Chatting with: <span id="recipient-name"></span></p>
+        <button class="leave-button" onclick="goToDashboard()">⬅ Back to Dashboard</button>
+    </div>
+    <div class="chat-area">
+        <div class="messages" id="chat-box"></div>
+        <p id="typingIndicator"></p>
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Type your message..." oninput="sendTypingEvent()">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+        const urlParams = new URLSearchParams(window.location.search);
+        const recipient = urlParams.get('user');
+    
+        if (!loggedInUser || !recipient) {
+            window.location.href = 'dashboard.html';
+        }
+    
+        document.getElementById('recipient-name').textContent = recipient;
+        socket.emit('registerUser', loggedInUser.username);
+    
+        socket.off('privateMessage').on('privateMessage', (data) => {
+            const chatBox = document.getElementById('chat-box');
+            const messageElement = document.createElement('p');
+            messageElement.textContent = `${data.from_user}: ${data.message}`;
+            messageElement.classList.add('received');
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+    
+            if (message) {
+                socket.emit('privateMessage', {
+                    from_user: loggedInUser.username,
+                    to_user: recipient,
+                    message: message
+                });
+    
+                const chatBox = document.getElementById('chat-box');
+                const myMessageElement = document.createElement('p');
+                myMessageElement.textContent = `You: ${message}`;
+                myMessageElement.classList.add('sent');
+                chatBox.appendChild(myMessageElement);
+                chatBox.scrollTop = chatBox.scrollHeight;
+    
+                messageInput.value = '';
+                socket.emit('stopTyping', { to_user: recipient });
+            }
+        }
+    
+        function sendTypingEvent() {
+            socket.emit('typing', { from_user: loggedInUser.username, to_user: recipient });
+        }
+    
+        socket.on('typing', (data) => {
+            const typingIndicator = document.getElementById('typingIndicator');
+            typingIndicator.textContent = `${data.from_user} is typing...`;
+    
+            setTimeout(() => {
+                typingIndicator.textContent = "";
+            }, 3000);
+        });
+    
+        socket.on('stopTyping', () => {
+            document.getElementById('typingIndicator').textContent = "";
+        });
+    
+        function goToDashboard() {
+            window.location.href = 'dashboard.html';
+        }
+    </script>    
+</body>
+</html>

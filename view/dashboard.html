@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            font-size: 2rem;
+            text-align: center;
+        }
+
+        h3 {
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .section {
+            width: 90%;
+            max-width: 800px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .room-card {
+            background-color: #222;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 150px;
+        }
+
+        .room-card strong {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .join-button {
+            background-color: #ff66b2;
+            color: black;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .join-button:hover {
+            background-color: pink;
+        }
+
+        .user-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .user-button {
+            background-color: #ff66b2;
+            color: black;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .user-button:hover {
+            background-color: pink;
+        }
+
+        .logout-button {
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: gray;
+            color: white;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .logout-button:hover {
+            background-color: darkgray;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #222;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            width: 300px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+
+        .modal-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            flex: 1;
+            margin: 0 5px;
+        }
+
+        .close-button {
+            background-color: gray;
+            color: white;
+        }
+
+        .close-button:hover {
+            background-color: darkgray;
+        }
+
+        .reply-button {
+            background-color: #ff66b2;
+            color: black;
+        }
+
+        .reply-button:hover {
+            background-color: pink;
+        }
+    </style>
+</head>
+<body>
+    <h2>Welcome, <span id="username"></span>!</h2>
+    <div class="section">
+        <h3>Group Chat Rooms</h3>
+        <div class="grid">
+            <div class="room-card">
+                <strong>DevOps</strong>
+                <button class="join-button" onclick="joinRoom('devops')">Join</button>
+            </div>
+            <div class="room-card">
+                <strong>Cloud Computing</strong>
+                <button class="join-button" onclick="joinRoom('cloud-computing')">Join</button>
+            </div>
+            <div class="room-card">
+                <strong>COVID-19</strong>
+                <button class="join-button" onclick="joinRoom('covid19')">Join</button>
+            </div>
+            <div class="room-card">
+                <strong>Sports</strong>
+                <button class="join-button" onclick="joinRoom('sports')">Join</button>
+            </div>
+            <div class="room-card">
+                <strong>Node.js</strong>
+                <button class="join-button" onclick="joinRoom('nodejs')">Join</button>
+            </div>
+        </div>
+    </div>
+    <div class="section">
+        <h3>Available Users for Private Chat</h3>
+        <div class="user-list" id="user-list"></div>
+    </div>
+
+    <button class="logout-button" onclick="logout()">Log Out</button>
+
+    <div class="modal" id="messageModal">
+        <div class="modal-content">
+            <p id="messageText"></p>
+            <div class="modal-buttons">
+                <button class="modal-button close-button" onclick="closeModal()">Close</button>
+                <button class="modal-button reply-button" onclick="replyToMessage()">Reply</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+        let lastSender = '';
+
+        if (!loggedInUser) {
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById('username').textContent = loggedInUser.username;
+            socket.emit('registerUser', loggedInUser.username);
+        }
+
+        function joinRoom(roomName) {
+            localStorage.setItem('joinedRoom', roomName);
+            window.location.href = `group-chatroom.html?room=${roomName}`;
+        }
+
+        function logout() {
+            localStorage.removeItem('loggedInUser');
+            localStorage.removeItem('joinedRoom');
+            window.location.href = 'login.html';
+        }
+
+        socket.emit('getOnlineUsers');
+
+        socket.on('onlineUsers', (users) => {
+            const userList = document.getElementById('user-list');
+            userList.innerHTML = '';
+            users.forEach((user) => {
+                if (user !== loggedInUser.username) {
+                    const button = document.createElement('button');
+                    button.textContent = user;
+                    button.classList.add('user-button');
+                    button.onclick = () => startPrivateChat(user);
+                    userList.appendChild(button);
+                }
+            });
+        });
+
+        function startPrivateChat(recipient) {
+            window.location.href = `private-chatroom.html?user=${recipient}`;
+        }
+
+        socket.on('privateMessage', ({ from_user, message }) => {
+            lastSender = from_user;
+            document.getElementById('messageText').textContent = `New message from ${from_user}: "${message}"`;
+            document.getElementById('messageModal').style.display = 'flex';
+        });
+
+        function closeModal() {
+            document.getElementById('messageModal').style.display = 'none';
+        }
+
+        function replyToMessage() {
+            window.location.href = `private-chatroom.html?user=${lastSender}`;
+        }
+    </script>
+</body>
+</html>

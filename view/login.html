@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        form {
+            background-color: #222;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            width: 300px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            margin: 10px 0 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+            outline: none;
+        }
+
+        .buttons {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .signin-btn {
+            background-color: #ff66b2;
+            color: black;
+        }
+
+        .signin-btn:hover {
+            background-color: pink;
+        }
+
+        .signup-btn {
+            background-color: gray;
+            color: white;
+        }
+
+        .signup-btn:hover {
+            background-color: darkgray;
+        }
+    </style>
+</head>
+<body>
+    <form id="loginForm">
+        <h2>Sign In</h2>
+
+        <label>Username:</label>
+        <input type="text" id="username" required>
+
+        <label>Password:</label>
+        <input type="password" id="password" required>
+
+        <div class="buttons">
+            <button type="submit" class="signin-btn">Sign In</button>
+            <button type="button" class="signup-btn" onclick="window.location.href='signup.html'">Create an Account</button>
+        </div>
+    </form>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+    
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+    
+            try {
+                const response = await fetch('/user/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+    
+                const data = await response.json();
+    
+                if (response.status === 200) {
+                    localStorage.setItem('loggedInUser', JSON.stringify(data.user));
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert(data.message || 'Login failed');
+                }
+            } catch (error) {
+                alert('Error connecting to the server');
+            }
+        });
+    </script>
+</body>
+</html>
